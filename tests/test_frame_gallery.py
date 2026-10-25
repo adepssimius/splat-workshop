@@ -1,6 +1,7 @@
 """The "On the Frame" tab: everything in Gaussian XR's gallery, what it is, and taking it off the Frame."""
 import json
 import time
+import zipfile
 
 from conftest import RUNS, server
 import synth
@@ -24,8 +25,14 @@ def example(frame, name="04_BurtLakeHouse"):
     return d
 
 
+def sog(path, count, pad=0):
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("meta.json", json.dumps({"count": count}) + " " * pad)
+
+
 def test_the_gallery_on_the_frame(api, frame):
     synth.make_room(RUNS, "Kitchen", "A", name="Kitchen")
+    sog(RUNS / "Kitchen" / "scene.sog", 1234)
     upload(api, "Kitchen")
     assert server.start_versions({"slug": "Kitchen", "sizes": "10000"}) is None
     from conftest import wait_job
@@ -42,6 +49,12 @@ def test_the_gallery_on_the_frame(api, frame):
     assert (by["04_BurtLakeHouse"]["kind"], by["04_BurtLakeHouse"]["name"]) == ("other", "BurtLakeHouse")
     assert by["04_BurtLakeHouse"]["size"] >= 5000
     assert (by["04_BurtLakeHouse"]["place"], by["20_Kitchen"]["place"]) == ("steam", "own")
+    # what is there: splats of the copied file, and whether the Frame still has the PC's file
+    assert (by["20_Kitchen"]["splats"], by["20_Kitchen"]["current"]) == (1234, True)
+    assert (by["04_BurtLakeHouse"]["splats"], by["04_BurtLakeHouse"]["current"]) == (None, None)
+    sog(RUNS / "Kitchen" / "scene.sog", 2000, pad=50)                    # newer on the PC than on the Frame
+    by = {x["folder"]: x for x in api.get("/api/frame/gallery?refresh=1")[1]["scenes"]}
+    assert (by["20_Kitchen"]["splats"], by["20_Kitchen"]["current"]) == (None, False)
     status, png = api.get("/api/frame/preview?folder=04_BurtLakeHouse")
     assert status == 200 and png == b"example preview"
     assert api.get("/api/frame/preview?folder=../../.ssh")[0] == 404

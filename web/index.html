@@ -1398,7 +1398,8 @@ async function loadFrameGallery(refresh) {
     <div class="rec scene" style="cursor:default">
       <div class="thumb" style="background-image:url('/api/frame/preview?folder=${encodeURIComponent(x.folder).replace(/'/g, "%27")}&amp;place=${x.place}&amp;s=${x.size}')"></div>
       <div class="meta"><b>${esc(x.name)}</b>
-        <span>${tr("fg.kind." + x.kind)} · ${mb(x.size)}</span>
+        <span>${tr("fg.kind." + x.kind)} · ${x.splats ? tr("sc.splats", {n: num(x.splats / 1e6, 2)}) + " · " : ""}${mb(x.size)}</span>
+        ${x.current === false ? `<div class="fstate no" title="${tr("fg.stale.title")}">${tr("fg.stale")}</div>` : ""}
         <span class="faint" style="overflow-wrap:anywhere" title="${tr("fg.place." + x.place + ".title")}">${tr("fg.place." + x.place)} · ${esc(x.folder)}</span>
         <div class="acts"><button class="small" data-fgdel="${esc(x.place + "/" + x.folder)}" title="${tr("fg.remove.title")}">🗑 ${tr("fg.remove")}</button></div>
       </div></div>`).join("") : `<div class="empty" style="grid-column:1/-1">${tr("fg.empty")}</div>`;

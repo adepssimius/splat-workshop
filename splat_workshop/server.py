@@ -26,6 +26,7 @@ import time
 import traceback
 import urllib.parse
 import urllib.request
+import zipfile
 from pathlib import Path
 
 from . import check, config
@@ -1139,6 +1140,17 @@ gallery_cache = {"t": 0, "data": None}
 RX_FOLDER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._ -]*")
 
 
+@functools.lru_cache(maxsize=256)
+def sog_count(path: str, mtime_ns: int):
+    """Number of splats in a SOG file (its meta.json), None if it cannot be read."""
+    try:
+        with zipfile.ZipFile(path) as z:
+            n = json.loads(z.read("meta.json")).get("count")
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile):
+        return None
+    return n if isinstance(n, int) else None
+
+
 def frame_gallery(force=False):
     """Every scene in Gaussian XR's gallery on the Frame (a folder with a preview image), with what it is:
     a scene, tour or version made here, or something else (e.g. Gaussian XR's examples). None = no Frame."""
@@ -1148,7 +1160,8 @@ def frame_gallery(force=False):
         return gallery_cache["data"]
     cmd = "".join(f'(cd {path} 2>/dev/null && for d in */; do d=${{d%/}}; '
                   f'g=$(ls "$d"/*.gallery.png 2>/dev/null | head -1); [ -n "$g" ] || continue; '
-                  f'echo "{place}|$d|$(du -sb "$d" | cut -f1)|${{g##*/}}"; done); ' for place, path in FRAME_PLACES.items())
+                  f's=$(stat -c %s "$d"/*.sog 2>/dev/null | head -1); '
+                  f'echo "{place}|$d|$(du -sb "$d" | cut -f1)|$s|${{g##*/}}"; done); ' for place, path in FRAME_PLACES.items())
     cmd += "true"
     try:
         r = subprocess.run(SSH + [cmd], capture_output=True, text=True, timeout=20)
@@ -1172,7 +1185,8 @@ def frame_gallery(force=False):
     for line in r.stdout.splitlines():
         place, _, line = line.partition("|")
         folder, _, rest = line.partition("|")
-        size, _, preview = rest.partition("|")
+        size, _, rest = rest.partition("|")
+        sog_size, _, preview = rest.partition("|")
         if place not in FRAME_PLACES or not RX_FOLDER.fullmatch(folder):
             continue
         owner = owners.get(folder)
@@ -1184,8 +1198,16 @@ def frame_gallery(force=False):
                 if (RUNS / slug / "versions" / key / "version.json").exists():
                     owner = (slug, key, "version", read_version(RUNS / slug / "versions" / key).get("label") or rest_)
         slug, version, kind, name = owner or ("", "", "other", re.sub(r"^\d\d_", "", folder))
+        # What is there: the splats of the file on this PC it was copied from, and whether the Frame still has
+        # that file (same size) or an older one
+        splats = current = None
+        local = RUNS / slug / "versions" / version / "scene.sog" if version else RUNS / slug / "scene.sog"
+        if slug and local.exists():
+            st = local.stat()
+            current = sog_size.isdigit() and int(sog_size) == st.st_size
+            splats = sog_count(str(local), st.st_mtime_ns) if current else None
         out.append({"folder": folder, "place": place, "size": int(size or 0), "preview": preview, "slug": slug,
-                    "version": version, "kind": kind, "name": name})
+                    "version": version, "kind": kind, "name": name, "splats": splats, "current": current})
     gallery_cache.update(t=time.time(), data=out)
     return out
 
