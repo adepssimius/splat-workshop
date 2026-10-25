@@ -12,6 +12,7 @@ and writes <file stem>.gallery.png and <file stem>.sceneinfo.png into the run fo
 The look matches the example scenes that ship with Gaussian XR.
 """
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -93,6 +94,16 @@ def from_plan(plan: Path, out: Path) -> None:
     square.resize((512, 512), Image.LANCZOS).convert("RGBA").save(out)
 
 
+def kept_preview(run: Path) -> Path | None:
+    """The newest preview image in the run folder, or – for a version (<scene>/versions/<key>) – the scene's."""
+    places = [run] + ([run.parent.parent] if run.parent.name == "versions" else [])
+    for place in places:
+        found = sorted(place.glob("*.gallery.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if found:
+            return found[0]
+    return None
+
+
 def main() -> None:
     if len(sys.argv) == 4 and sys.argv[1] == "--label":
         label(sys.argv[3], Path(sys.argv[2]))
@@ -107,6 +118,11 @@ def main() -> None:
         sys.exit(__doc__)
     run, log, name, stem = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4]
     preview = run / f"{stem}.gallery.png"
+    if not preview.exists() and not any(run.glob("dataset/images/cam0/*.jpg")):
+        # No picture under this stem and nothing to make one from (a version has no images of its own, and a
+        # renamed scene's versions still carry the old stem): take the one already there, else the scene's
+        if old := kept_preview(run):
+            shutil.copyfile(old, preview)
     if preview.exists() and not any(run.glob("dataset/images/cam0/*.jpg")):
         # Training images were cleaned up: keep the existing preview, only renew the name plate
         label(name, run / f"{stem}.sceneinfo.png")

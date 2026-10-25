@@ -145,3 +145,20 @@ def test_an_old_frame_listing_is_answered_at_once_and_renewed_behind(frame):
     while server.frame_cache.get("renewing") and _t.time() < end:
         _t.sleep(0.05)
     assert server.frame_listing()["scenes"] != ["old"]                 # renewed in the background
+
+
+def test_a_version_goes_to_the_frame_without_training_images(api, frame):
+    # Versions have no images of their own; after a rename their preview still carries the old stem, and once
+    # the training images are cleaned up there is nothing to draw a new one from (0.6.1: "Übertragung
+    # fehlgeschlagen" for every version of the renamed tour)
+    synth.make_room(RUNS, "Hall", "A", name="Hall")
+    assert server.start_versions({"slug": "Hall", "sizes": "10000"}) is None
+    from conftest import wait_job
+    wait_job()
+    vdir = RUNS / "Hall" / "versions" / "0.01m"
+    for f in vdir.glob("*.gallery.png"):
+        f.rename(vdir / "hall.-0.01m.gallery.png")                  # the stem before the rename
+    for f in (RUNS / "Hall" / "dataset" / "images").rglob("*.jpg"):
+        f.unlink()
+    upload(api, "Hall", "0.01m")
+    assert (vdir / "hall-0.01m.gallery.png").read_bytes() == (vdir / "hall.-0.01m.gallery.png").read_bytes()
