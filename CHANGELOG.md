@@ -2,6 +2,17 @@
 
 All notable changes to Splat Workshop. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.6.2] – 2026-10-25
+
+### Added
+
+- **On the Frame shows what is there**: each scene in the *On the Frame* tab now says how many splats it has, and marks *Older state than on this PC* when the file on the Frame is not the one on this PC any more (e.g. the scene was computed again but not copied yet).
+- **⚠️ on Copy to the Frame for big scenes and tours** too, as before only for versions: above 2.5 M splats the Frame runs at only about 14 fps; the button's tooltip says how many there are.
+
+### Fixed
+
+- **Versions could not be copied to the Frame** (*Copy failed*) once the scene had been renamed and its training images cleaned up: the preview for the gallery was looked for under the new name only, and making a new one needs the training images, which a version never has. Now the preview already there is taken, else the scene's.
+
 ## [0.6.1] – 2026-10-17
 
 ### Changed
@@ -208,6 +219,7 @@ First release.
 - **Floor plans** (experimental) in two styles with a measuring tool.
 - Configurable video player; English and German interface.
 
+[0.6.2]: https://github.com/thunderheronight/splat-workshop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/thunderheronight/splat-workshop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/thunderheronight/splat-workshop/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/thunderheronight/splat-workshop/compare/v0.5.0...v0.5.1

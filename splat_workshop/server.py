@@ -32,7 +32,7 @@ from pathlib import Path
 from . import check, config
 from .i18n import T, detect
 
-VERSION = "0.6.1"
+VERSION = "0.6.2"
 CFG = config.load()
 ROOT = config.ROOT
 WEB = ROOT / "web"
@@ -2334,7 +2334,8 @@ def groups():
                    "stale": used != sorted(m for m, _ in inner)
                             or any((RUNS / m / "scene.sog").stat().st_mtime > built for m, _ in inner),
                    "preview": bool(next(d.glob("*.gallery.png"), None)), "ply": (d / "spirula" / "scene.ply").exists(),
-                   "on_frame": on_frame, "upload": upload_status(slug), "disk": disk_usage(d)}
+                   "on_frame": on_frame, "upload": upload_status(slug), "disk": disk_usage(d),
+                   "frame_count": sog_count(str(d / "scene.sog"), (d / "scene.sog").stat().st_mtime_ns)}
         out.append({"slug": slug, "name": meta.get("name") or slug, "members": members, "result": res,
                     "room": is_room(meta), "parent": parents.get(slug), "scenes": [m for m, _ in inner],
                     "rooms": len({r for _, r in inner}),

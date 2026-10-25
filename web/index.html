@@ -1106,10 +1106,13 @@ function frameState(s) {
   if (s.on_frame === false) return `<div class="fstate no">${tr("sc.notOnFrame")}</div>`;
   return S.frameConfigured ? `<div class="fstate faint">${tr("sc.frameOffline")}</div>` : "";
 }
+const FRAME_SLOW = 2.5e6;                              // splats; more runs at only about 14 fps on the Frame
 function uploadBtn(s) {
   if (!S.frameConfigured) return "";
   const busy = s.upload && s.upload.running;
-  const label = tr(s.on_frame ? "sc.reupload" : "sc.toFrame"), title = tr(s.on_frame ? "sc.reupload.title" : "sc.toFrame.title");
+  const slow = s.splats > FRAME_SLOW;                   // as for the versions: the Frame stutters above this
+  const label = tr(s.on_frame ? "sc.reupload" : "sc.toFrame") + (slow ? " ⚠️" : "");
+  const title = slow ? tr("ver.slow", {n: num(s.splats / 1e6, 1)}) : tr(s.on_frame ? "sc.reupload.title" : "sc.toFrame.title");
   return `<button class="small${s.on_frame ? "" : " primary"}" data-upload="${esc(s.slug)}" title="${title}" ${busy || s.on_frame === null ? "disabled" : ""}>${label}</button>`;
 }
 function sceneCard(s) {
@@ -1122,7 +1125,7 @@ function sceneCard(s) {
         ${scaleLine(s)}
         ${s.replacing ? `<div class="fstate faint">${tr("sc.replacing")}</div>` : frameState(s)}
         <div class="acts rows${s.replacing ? " hidden" : ""}">
-          ${S.frameConfigured ? `<div class="arow">${uploadBtn(s)}</div>` : ""}
+          ${S.frameConfigured ? `<div class="arow">${uploadBtn({...s, splats: s.gaussians})}</div>` : ""}
           <div class="arow">${s.ply ? `<button class="small pc-only" data-spirula="${esc(s.slug)}" title="${tr("sc.spirula.title")}">${tr("sc.spirula")}</button>` : ""}${s.ply ? `<button class="small" data-mesh="${esc(s.slug)}" title="${tr("mesh.button.title")}">${tr(s.mesh ? "mesh.button.has" : "mesh.button")}</button>` : ""}${s.ply ? `<button class="small" data-plan="${esc(s.slug)}">${tr("sc.plan")}</button>` : ""}<button class="small pc-only" data-open="${esc(s.slug)}">${tr("sc.folder")}</button></div>
           <div class="arow"><button class="small icon" data-rename="${esc(s.slug)}" title="${tr("ren.button")}" aria-label="${tr("ren.button")}">✎</button><button class="small icon" data-scale="${esc(s.slug)}" title="${tr("scale.button.title")}">📏${s.scale !== 1 ? " " + ratioText(s.scale) : ""}</button><button class="small icon" data-clean="${esc(s.slug)}" title="${tr("sc.clean.title")}" aria-label="${tr("sc.clean.title")}">${tr("sc.clean")}</button><button class="small icon" data-delete="${esc(s.slug)}" title="${tr("sc.delete.title")}" aria-label="${tr("sc.delete.title")}">${tr("sc.delete")}</button></div></div>
         <div class="toggles${s.replacing ? " hidden" : ""}">${versionsToggle(s.slug, s.versions)}</div>
@@ -1169,7 +1172,7 @@ function groupBlock(g, bySlug, byGroup) {
         ${tour}${busy}
         <div class="acts">
           <button class="small${!r || r.stale ? " primary" : ""}" data-combine="${esc(g.slug)}" ${g.busy || scenes.length < 2 ? "disabled" : ""}>${tr(r ? "grp.recombine" : g.room ? "grp.room.combine" : "grp.combine")}</button>
-          ${r ? uploadBtn({slug: g.slug, on_frame: r.on_frame, upload: r.upload}) : ""}<i class="sep"></i>
+          ${r ? uploadBtn({slug: g.slug, on_frame: r.on_frame, upload: r.upload, splats: r.frame_count}) : ""}<i class="sep"></i>
           ${r && r.ply ? `<button class="small pc-only" data-spirula="${esc(g.slug)}" title="${tr("sc.spirula.title")}">${tr("sc.spirula")}</button>` : ""}
           ${r && r.ply ? `<button class="small" data-mesh="${esc(g.slug)}" title="${tr("mesh.button.title")}">${tr(g.mesh ? "mesh.button.has" : "mesh.button")}</button>` : ""}
           ${scenes.some(s => s.ply) ? `<button class="small" data-gplan="${esc(g.slug)}">${tr("sc.plan")}</button>` : ""}
@@ -1529,7 +1532,7 @@ function cleanText(clean) {
 }
 function versionRow(v) {
   const what = (v.purpose === "pc" ? tr("ver.all") : tr("million", {n: num(v.splats / 1e6, 2)})) + (v.scale !== 1 ? " · " + ratioText(v.scale) : "");
-  const slow = v.purpose === "pc" && v.splats > 2.5e6;
+  const slow = v.purpose === "pc" && v.splats > FRAME_SLOW;
   return `<div class="vrow">
     <div class="vwhat"><b>${v.purpose === "pc" ? "🖥️" : "🥽"} ${esc(what)}</b>
       <span class="muted">${cleanText(v.clean) || tr("ver.clean.none")}</span>
