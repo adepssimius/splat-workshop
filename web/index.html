@@ -1538,7 +1538,7 @@ function versionRow(v) {
       <span class="muted">${cleanText(v.clean) || tr("ver.clean.none")}</span>
       <span class="faint">${tr("million", {n: num(v.splats / 1e6, 2)})} · ${mb(v.size)}${v.stale ? " · " + tr("ver.stale") : ""}</span></div>
     <div class="vacts">${v.on_frame === null && !(v.upload && (v.upload.running || v.upload.error)) ? "" : frameState({upload: v.upload, on_frame: v.on_frame})}
-      ${v.ply ? `<button class="small pc-only" data-vspirula="${esc(v.key)}" title="${tr("sc.spirula.title")}">${tr("sc.spirula")}</button>` : ""}
+      <button class="small pc-only" data-vspirula="${esc(v.key)}" title="${tr("sc.spirula.title")}">${tr("sc.spirula")}</button>
       ${S.frameConfigured ? `<button class="small" data-vup="${esc(v.key)}" ${(v.upload && v.upload.running) || v.on_frame === null ? "disabled" : ""} ${slow ? `title="${tr("ver.slow", {n: num(v.splats / 1e6, 1)})}"` : ""}>${tr(v.on_frame ? "sc.reupload" : "sc.toFrame")}${slow ? " ⚠️" : ""}</button>` : ""}
       ${v.on_frame ? `<button class="small" data-vunframe="${esc(v.key)}" title="${tr("ver.unframe.title")}">${tr("ver.unframe")}</button>` : ""}
       <button class="small" data-vtemplate="${esc(v.key)}" title="${tr("ver.template.title")}">${tr("ver.template")}</button>
@@ -1548,6 +1548,7 @@ function versionRow(v) {
 function bindVersionRows(box, slug, list, redraw) {
   const find = key => list.find(x => x.key === key);
   box.querySelectorAll("[data-vspirula]").forEach(b => b.onclick = async () => {
+    if (!find(b.dataset.vspirula).ply) toast(tr("sc.spirula.unpacking"));   // only the sog: the server unpacks it first
     const res = await api("/api/open", {slug, version: b.dataset.vspirula, what: "spirula"});
     toast(res.ok === false ? trErr(res.error) : tr("sc.spirula.starting"));
   });

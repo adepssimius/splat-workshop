@@ -7,6 +7,7 @@ The expectations come from how it is built, not from the code."""
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -226,11 +227,16 @@ def test_a_version_opens_in_spirula(api, monkeypatch):
     wait_job()
     api.post("/api/versions", {"slug": "Living", "sizes": "20000"})
     wait_job()
-    opened = []
-    monkeypatch.setattr(server.subprocess, "Popen", lambda cmd, **kw: opened.append(cmd))
+    opened, popen = [], server.subprocess.Popen                 # subprocess.run (splat-transform) still runs
+    monkeypatch.setattr(server.subprocess, "Popen",
+                        lambda cmd, **kw: opened.append(cmd) if cmd[0] == str(server.CFG.spirula) else popen(cmd, **kw))
     assert api.post("/api/open", {"slug": "Living", "version": "all-c50", "what": "spirula"})[0] == 200
     assert opened[-1][1] == str(run / "versions" / "all-c50" / "spirula" / "scene.ply")
-    status, r = api.post("/api/open", {"slug": "Living", "version": "0.02m", "what": "spirula"})   # no ply
-    assert status == 400 and r["error"]["code"] == "err.no_version"
+    # a Frame version keeps only its sog: unpacked into the cache, only the newest kept
+    assert api.post("/api/open", {"slug": "Living", "version": "0.02m", "what": "spirula"})[0] == 200
+    first = Path(opened[-1][1])
+    assert first.parent == server.CACHE / "view" and first.read_bytes() == (run / "versions" / "0.02m" / "scene.sog").read_bytes()
+    api.post("/api/open", {"slug": "Living", "version": "0.02m", "what": "spirula"})
+    assert opened[-1][1] == str(first)                                          # unpacked once
     status, r = api.post("/api/open", {"slug": "Living", "version": "../x", "what": "spirula"})
-    assert status == 400 and len(opened) == 1
+    assert status == 400 and r["error"]["code"] == "err.no_version" and len(opened) == 3

@@ -1036,6 +1036,27 @@ def parse_cleanup(raw: str):
     return out
 
 
+def view_ply(sog: Path):
+    """A ply of a version's sog for Spirula Studio, which opens no sog – in the cache, only the newest one kept."""
+    st = sog.stat()
+    folder = CACHE / "view"
+    out = folder / f"{hashlib.sha1(f'{sog}|{st.st_size}|{st.st_mtime_ns}'.encode()).hexdigest()[:16]}.ply"
+    if not out.exists():
+        shutil.rmtree(folder, ignore_errors=True)
+        folder.mkdir(parents=True)
+        tmp = out.with_suffix(".tmp.ply")
+        try:
+            r = subprocess.run([str(CFG.splat_transform or "splat-transform"), "-w", str(sog), str(tmp)],
+                               capture_output=True, text=True, timeout=300)
+        except (OSError, subprocess.TimeoutExpired):
+            r = None
+        if r is None or r.returncode or not tmp.exists():
+            tmp.unlink(missing_ok=True)
+            return None, err("err.view_ply", detail=((r.stderr if r else "").strip().splitlines() or [""])[-1])
+        tmp.rename(out)
+    return out, None
+
+
 def versions_of(slug: str) -> list:
     d = scene_dir(slug)
     if not d or not (d / "versions").is_dir():
@@ -2805,7 +2826,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     v = {x["key"]: x for x in versions_of(p.get("slug", ""))}.get(p["version"])
                     own = d / "versions" / p["version"] / "spirula" / "scene.ply"
                     ply = own if v and own.exists() else ply if v and v["ply"] else None
-                if ply is None:
+                    if v and ply is None:               # a Frame version keeps only its sog
+                        ply, e = view_ply(d / "versions" / p["version"] / "scene.sog")
+                if e:
+                    pass
+                elif ply is None:
                     e = err("err.no_version")
                 else:
                     subprocess.Popen([str(CFG.spirula), str(ply)], cwd=ply.parent.parent,

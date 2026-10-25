@@ -2,6 +2,12 @@
 
 All notable changes to Splat Workshop. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Spirula for every version**: Frame versions keep only their sog, which Spirula Studio cannot open – *Spirula* now unpacks it into a ply in the cache (only the newest one is kept) and opens that, so every version can be looked at on the PC.
+
 ## [0.6.2] – 2026-10-25
 
 ### Added
@@ -219,6 +225,7 @@ First release.
 - **Floor plans** (experimental) in two styles with a measuring tool.
 - Configurable video player; English and German interface.
 
+[Unreleased]: https://github.com/thunderheronight/splat-workshop/compare/v0.6.2...HEAD
 [0.6.2]: https://github.com/thunderheronight/splat-workshop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/thunderheronight/splat-workshop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/thunderheronight/splat-workshop/compare/v0.5.1...v0.6.0
