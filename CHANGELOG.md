@@ -6,6 +6,7 @@ All notable changes to Splat Workshop. The format follows [Keep a Changelog](htt
 
 ### Added
 
+- **Smooth surfaces and simple colours** – two new checkboxes under *Quality*, both on by default, each with a note on what it costs. *Smooth surfaces* has Spirula estimate depth and normals before training: walls and floors come out flat and hardly any flakes float in the room – clearly the best of six test runs on the same room, at about 30–60 min more. *Simple colours* trains without view-dependent shine: about 20 % smaller for the Frame with no visible loss. The progress shows *Estimating surfaces … n of m images*, the time estimate includes it, cleaning up the training images also removes the normal maps, and *Resume* keeps a scene's choice.
 - **Spirula for every version**: Frame versions keep only their sog, which Spirula Studio cannot open – *Spirula* now unpacks it into a ply in the cache (only the newest one is kept) and opens that, so every version can be looked at on the PC.
 
 ## [0.6.2] – 2026-10-25

@@ -530,6 +530,9 @@ RX_ALIGN = re.compile(r"Aligned (\d+) cameras .*?RMS ([\d.]+) m")
 RX_TOTAL = re.compile(r"Extracting (\d+) images")
 RX_GAUSS = re.compile(r"spirula: ([\d,]+) Gaussians")
 RX_DONE = re.compile(r"^@@ done (frame|local)(?: (\S+))?", re.M)
+RX_NORMALS = re.compile(r"^@@ normals (\d+)", re.M)
+# Training options of scripts/spirula-train.sh: surface normals first, no view-dependent colour
+TRAIN_OPTIONS = ("normals", "sh0")
 
 
 def hms(s: str) -> float:
@@ -593,9 +596,13 @@ def parse_output(text: str) -> dict:
         info["rms_cm"] = round(float(a[2]) * 100, 1)
         if tot := RX_TOTAL.search(text):
             info["images"] = int(tot[1])
+    if n := RX_NORMALS.findall(text):
+        phase, pct = 2, None                    # job_status counts the maps written so far
+        info["normals"] = {"total": int(n[-1])}
     steps = RX_STEP.findall(text)
     if steps:
         phase = 2
+        info.pop("normals", None)
         last = steps[-1]
         pct = int(last[2])
         eta = hms(last[5])
@@ -633,6 +640,9 @@ def job_status(tail=True) -> dict | None:
     text = out.read_text(errors="replace") if out.exists() else ""
     running = pid_alive(st["pid"])
     parsed = parse_output(text)
+    if (nm := parsed["info"].get("normals")) and st.get("slug"):
+        nm["done"] = sum(1 for _ in (RUNS / st["slug"] / "dataset" / "normals").rglob("*.*"))
+        parsed["pct"] = min(99, round(100 * nm["done"] / nm["total"])) if nm["total"] else None
     res = {**st, **parsed, "running": running}
     if tail:
         res["tail"] = "\n".join(text.replace("\r", "\n").splitlines()[-200:])
@@ -676,6 +686,9 @@ def start_job(p: dict, part: str = "", chain: dict = None):
                 env[key] = str(v)
         if not p.get("upload", True) or not FRAME or part:
             env["NO_UPLOAD"] = "1"                  # a part alone is no scene for the Frame
+        # training options (scripts/spirula-train.sh), both on unless switched off
+        options = {k: p.get(k) is not False for k in TRAIN_OPTIONS}
+        env.update({k.upper(): "1" if on else "0" for k, on in options.items()})
         if part:
             env["PART"] = part
         args = []
@@ -702,11 +715,11 @@ def start_job(p: dict, part: str = "", chain: dict = None):
         st = load_state()
         st["job"] = {"pid": proc.pid, "out": str(out), "name": name, "slug": slug, "recording": Path(path).name,
                      "quality": env["QUALITY"], "upload": "NO_UPLOAD" not in env, "started": time.time(),
-                     "overrides": {k: env[k] for k in ("FRAMES", "SCALE", "MAXG", "ITER") if k in env},
+                     "overrides": {k: env[k] for k in ("FRAMES", "SCALE", "MAXG", "ITER") if k in env}, **options,
                      **({"part": part} if part else {}), **({"chain": chain} if chain else {})}
         save_state(st)
         RUNS.mkdir(parents=True, exist_ok=True)
-        write_meta(slug, name=name, recording=Path(path).name, quality=env["QUALITY"], part=part or None,
+        write_meta(slug, name=name, recording=Path(path).name, quality=env["QUALITY"], part=part or None, **options,
                    **({} if "--resume" in args else {"cleaned": [], "recording_renamed": False}),
                    **({"previous": previous} if previous is not None else {}))
     return None
@@ -752,7 +765,8 @@ def start_parts(p: dict):
     ranges = part_ranges(duration, n)
     chain = {"room": room, "path": path, "quality": p.get("quality", "high"), "i": 0, "n": n,
              "parts": [{"name": x, "slug": s_, "part": f"{a:.2f}-{b:.2f}"} for x, s_, (a, b) in zip(names, slugs, ranges)],
-             "settings": {k: p.get(k) for k in ("frames", "scale", "maxg", "iter") if p.get(k) not in (None, "")},
+             "settings": {**{k: p.get(k) for k in ("frames", "scale", "maxg", "iter") if p.get(k) not in (None, "")},
+                          **{k: p.get(k) is not False for k in TRAIN_OPTIONS}},
              "upload": bool(p.get("upload", True)) and bool(FRAME)}
     first = chain["parts"][0]
     return start_job({**chain["settings"], "path": path, "name": first["name"], "quality": chain["quality"],
@@ -1882,7 +1896,7 @@ def scene_dir(slug: str) -> Path | None:
 
 # What a finished scene can do without: intermediate state (lossless) and the training images (a new
 # training then has to start from the recording again). Scene, floor plan and Spirula viewer keep working.
-CLEANUP = {"temp": ("spirula/training", "dataset/.spirula-sfm"), "images": ("dataset/images",)}
+CLEANUP = {"temp": ("spirula/training", "dataset/.spirula-sfm"), "images": ("dataset/images", "dataset/normals")}
 usage_cache = {}                   # run folder -> (time, sizes)
 
 
@@ -1992,7 +2006,8 @@ def resume_run(slug: str, fresh: bool):
         return err("err.not_resumable")
     quality = QUALITY_ALIASES.get(meta.get("quality"), meta.get("quality") or "high")
     return start_job({"path": rec, "name": meta["name"], "quality": quality, "existing": "fresh" if fresh else "resume",
-                      "upload": bool(FRAME) and frame_listing() is not None}, part=meta.get("part") or "")
+                      "upload": bool(FRAME) and frame_listing() is not None,
+                      **{k: bool(meta.get(k)) for k in TRAIN_OPTIONS}}, part=meta.get("part") or "")
 
 
 def delete_scene(slug: str):

@@ -333,6 +333,12 @@ select.lang { font: inherit; font-size: 12.5px; color: var(--muted); background:
           <button data-q="high" class="active"><b data-i18n="q.high"></b><span data-i18n="q.high.sub"></span></button>
           <button data-q="max"><b data-i18n="q.max"></b><span data-i18n="q.max.sub"></span></button>
         </div>
+        <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin:14px 0 0;font-size:14px">
+          <input type="checkbox" id="optNormals" checked style="margin-top:3px"><span><b data-i18n="opt.normals"></b><br>
+          <span class="faint" style="font-size:12.5px" data-i18n="opt.normals.hint"></span></span></label>
+        <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 0;font-size:14px">
+          <input type="checkbox" id="optSh0" checked style="margin-top:3px"><span><b data-i18n="opt.sh0"></b><br>
+          <span class="faint" style="font-size:12.5px" data-i18n="opt.sh0.hint"></span></span></label>
         <details class="adv">
           <summary data-i18n="adv"></summary>
           <p class="faint" style="font-size:12.5px;margin:10px 0 0" data-i18n="adv.hint"></p>
@@ -949,12 +955,13 @@ function updateStart() {
   const s = settings();
   for (const k of ["frames", "scale", "maxg", "iter"]) $("#" + k).placeholder = num(s.pre[k], k === "scale" || k === "maxg" ? 1 : 0);
   // rough time estimate (measured on an RTX 4070 SUPER: 30k steps, 2 M splats, full resolution ≈ 30 min;
-  // preparation ≈ 2.5 s per image pair)
+  // preparation ≈ 2.5 s per image pair; with normals ≈ 2.3 s per image more and a 40 % longer training)
   const res = s.scale >= 1 ? 1 : s.scale >= 0.5 ? 0.33 + (s.scale - 0.5) * 1.34 : 0.2;
-  const train = s.iter / 1000 * res * Math.pow(s.maxg / 2, 0.8);
+  const normals = $("#optNormals").checked;
+  const train = s.iter / 1000 * res * Math.pow(s.maxg / 2, 0.8) * (normals ? 1.4 : 1);
   const parts = S.split && S.split.parts ? S.split.n : 1;
   const frames = parts > 1 ? Math.min(PAIRS_MAX, Math.round(S.probe.duration / parts * PAIR_RATE[S.quality])) : s.frames;
-  const total = Math.round((train + frames * 2.5 / 60 + 1) * parts);
+  const total = Math.round((train + frames * (normals ? 7.1 : 2.5) / 60 + 1) * parts);
   const busy = S.job && S.job.running;
   const ready = S.sel && (!S.probe || S.probe.ok) && $("#name").value.trim();
   $("#startBtn").disabled = !ready || busy || !!(S.sel && queued(S.sel.name));
@@ -967,6 +974,7 @@ document.querySelectorAll("#quality button").forEach(b => b.onclick = () => {
 });
 document.querySelectorAll("input[name=target]").forEach(r => r.onchange = () => { S.targetTouched = true; targetChanged(); });
 ["frames", "scale", "maxg", "iter"].forEach(id => $("#" + id).oninput = updateStart);
+$("#optNormals").onchange = updateStart;
 $("#name").oninput = () => { $("#name").dataset.auto = "0"; updateStart(); };
 function setTab(tab) { S.tab = tab; document.querySelectorAll(".tab[data-tab]").forEach(x => x.classList.toggle("active", x.dataset.tab === tab)); }
 document.querySelectorAll(".tab[data-tab]").forEach(t => t.onclick = () => { setTab(t.dataset.tab); renderRecs(); });
@@ -993,7 +1001,8 @@ async function start(existing) {
   if (!S.probe.ok) { toast(tr("unusable")); return; }
   const v = id => $("#" + id).value.trim();
   const body = {path: S.sel.path, name: $("#name").value.trim(), quality: S.quality, upload: target() === "frame", existing,
-    frames: v("frames") || null, scale: v("scale") || null, maxg: v("maxg") ? Math.round(+v("maxg") * 1e6) : null, iter: v("iter") || null};
+    frames: v("frames") || null, scale: v("scale") || null, maxg: v("maxg") ? Math.round(+v("maxg") * 1e6) : null, iter: v("iter") || null,
+    normals: $("#optNormals").checked, sh0: $("#optSh0").checked};
   if (S.split && S.split.parts && !existing) {               // in parts, then one room
     const r = await api("/api/parts", {...body, parts: S.split.n});
     if (!r.ok) { toast(trErr(r.error)); return; }
@@ -1056,7 +1065,8 @@ function renderJob() {
   bar.classList.toggle("hidden", !j.running);
   bar.classList.toggle("indet", j.pct == null);
   bar.firstElementChild.style.width = (j.pct ?? 0) + "%";
-  $("#phaseText").textContent = j.running ? phases[j.phase] + " …" : "";
+  const nm = (j.info || {}).normals;                    // estimating surface normals, before the training
+  $("#phaseText").textContent = !j.running ? "" : nm ? tr("phase.normals", {done: nm.done ?? 0, total: nm.total}) : phases[j.phase] + " …";
   $("#pctText").textContent = j.running ? (j.pct != null ? j.pct + " %" : "") + (j.eta != null ? tr("job.left", {time: mins(j.eta + 60)}) : "") : "";
   const i = j.info || {}, tiles = [];
   if (i.cameras != null) tiles.push([tr("tile.cameras"), `${i.cameras}${i.images ? " / " + i.images : ""}`]);

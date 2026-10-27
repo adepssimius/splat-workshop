@@ -12,6 +12,9 @@
 #       high  ~5 image pairs per second of video (100-500), full resolution, up to 2 M splats
 #       max   ~8 image pairs per second of video (100-500), full resolution, up to 3 M splats, 50k steps
 #   FRAMES, SCALE, MAXG, ITER  override single preset values
+#   NORMALS=1     estimate surface normals before training: flatter surfaces, far fewer floating flakes,
+#                 about 2.5 s per image longer (scripts/spirula-train.sh)
+#   SH0=1         no view-dependent colour: about 20 % smaller, no visible loss
 #   NO_UPLOAD=1   only compute, don't copy to the Frame
 #   PART=120-245  only this stretch of the recording (seconds): cut losslessly with the original
 #                 timestamps (the pipeline matches the images to the poses by time) into
@@ -146,11 +149,13 @@ quality=(--frames "${FRAMES:-$frames}" --training-image-scale "${SCALE:-$scale}"
          --max-gaussians "${MAXG:-$maxg}" --iterations "${ITER:-$iter}")
 echo "Quality ${QUALITY:-high}: ${quality[*]}" | tee -a "$log"
 
-# 2. Compute the Gaussian splat. Spirula in English, so the progress lines can be parsed.
+# 2. Compute the Gaussian splat. Spirula in English, so the progress lines can be parsed; the pipeline
+# runs it through spirula-train.sh, which adds the training options above.
+echo "Normals ${NORMALS:-0}, view-dependent colour $([ "${SH0:-0}" = 1 ] && echo off || echo on)" | tee -a "$log"
 cd "$PIPELINE_DIR"
-SS_LANG=en uv run av1_to_3dgs.py "$in" "$out" \
+SPIRULA_REAL=$SPIRULA_BIN NORMALS=${NORMALS:-0} SH0=${SH0:-0} SS_LANG=en uv run av1_to_3dgs.py "$in" "$out" \
   --backend spirula --sfm-backend spirula --no-undistort \
-  --spirula "$SPIRULA_BIN" \
+  --spirula "$HERE/spirula-train.sh" \
   --splat-transform "$SPLAT_TRANSFORM" \
   "${quality[@]}" "$@" 2>&1 | tee -a "$log"
 [ -f "$out/scene.sog" ] || { echo "No scene.sog was produced, see $log" >&2; exit 1; }

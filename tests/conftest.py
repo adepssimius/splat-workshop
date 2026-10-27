@@ -61,6 +61,11 @@ print("Running native Spirula SfM", flush=True)
 print("Aligned 20 cameras using orientation anchor cam0/0000.jpg: RMS 0.0110 m, median 0.0090 m.", flush=True)
 if mode == "fail":
     sys.exit("fake pipeline: failed on purpose")
+# like the real one: Spirula trains (through spirula-train.sh, which may estimate normals first)
+spirula = sys.argv[sys.argv.index("--spirula") + 1] if "--spirula" in sys.argv else None
+if spirula:
+    import subprocess
+    subprocess.run([spirula, "train", "--data", str(out / "dataset"), "--cap-max", "2000000"], check=True)
 for step in (1000, 2000, 3000):
     print(f"step {step:6d}/3000 ({step // 30:3d}%)  splats 1000  [elapsed 00:00:0{step // 1000}.000 | ETA 00:00:01.000]  rgb_loss=0.1  ssim=0.8  psnr=28.5", flush=True)
     if mode == "slow":
@@ -94,6 +99,12 @@ sys.path.insert(0, "{Path(__file__).parent}")
 with open("{TOOL_LOG}", "a") as log:
     log.write(json.dumps(["spirula", *sys.argv[1:]]) + "\\n")
 args = sys.argv[1:]
+if args[:1] == ["geometry"]:                # one normal map per image, as the real one writes them
+    data = Path(args[1])
+    for im in sorted((data / "images").rglob("*.jpg")):
+        n = data / "normals" / im.relative_to(data / "images").with_suffix(".png")
+        n.parent.mkdir(parents=True, exist_ok=True)
+        n.write_bytes(b"png")
 if args[:1] == ["mesh"]:
     import fake_mesh
     opt = lambda k: args[args.index(k) + 1]

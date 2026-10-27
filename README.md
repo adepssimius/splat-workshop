@@ -158,7 +158,7 @@ Start **Splat Workshop** from the menu (or `./splat-workshop`). The tray icon ap
 | `./splat-workshop --background` | tray icon only (autostart) |
 | `./splat-workshop --no-tray` | without tray; the server stops itself after 20 idle minutes |
 | `./splat-workshop --server` | server in the foreground |
-| `scripts/splat.sh <recording> "<name>"` | convert on the command line (`QUALITY=fast\|high\|max`, `NO_UPLOAD=1`, `PART=120-245` for a stretch, `--resume`) |
+| `scripts/splat.sh <recording> "<name>"` | convert on the command line (`QUALITY=fast\|high\|max`, `NORMALS=1`, `SH0=1`, `NO_UPLOAD=1`, `PART=120-245` for a stretch, `--resume`) |
 | `scripts/to-frame.sh <run> "<name>"` | (re)copy a finished scene to the Frame |
 | `scripts/combine.sh <name> "<display name>" <run>=<label> ...` | put scenes together into a tour (`ALIGN=frame\|images\|shift\|rigid`, `FRAME_SPLATS`, `FULL=0`, `NO_UPLOAD=1`, `ROOMS='["Kitchen","Kitchen","Hallway"]'` for rooms made of several recordings) |
 
@@ -205,6 +205,13 @@ It is a measurement, not image recognition: it does not detect people or moving 
 
 \* RTX 4070 SUPER. Spirula keeps training images on disk, so 12 GB of VRAM are enough for “High”. A run needs a few GB of free disk space.
 The 100–500 image pairs per recording are a limit of the Arcturus pipeline. Above 100 s (*High*) or 63 s (*Maximum*) a recording gets fewer pairs per second, and *Maximum* adds no images any more – see *Large rooms* above.
+
+Two training options, both on by default in the web interface (times above are without them):
+
+- **Smooth surfaces (depth and normals)** – Spirula estimates the surface direction in every image first (`spirula geometry`) and trains with it: walls and floors come out flat, and hardly any flakes float in the room. In tests on the same room it was clearly the best of all settings. It adds about 2.5 s per image (~30 min for 800 images), makes the training ~40 % longer and needs ~1 GB more disk space until the training images are cleaned up.
+- **Simple colours** (`--sh-degree 0`, no view-dependent shine) – about 20 % smaller for the Frame with no visible loss in the same tests; only shiny things (screens, lacquer) lose their changing gloss.
+
+On the command line they are off unless you set `NORMALS=1` and `SH0=1` for `scripts/splat.sh`.
 
 ## Files
 
