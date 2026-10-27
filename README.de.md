@@ -22,6 +22,12 @@ Arcturus Vision stellt die Rekonstruktions-Skripte und einen Spirula-Studio-Fork
 4. **In die Galerie**: Vorschaubild und Namensschild im Stil der Beispielszenen, kopiert in den Ordner für eigene Szenen von Gaussian XR auf der Frame (`Documents/GaussianXR`).
 5. **Die Wohnung zusammensetzen**: Räume gruppieren – ein Raum darf aus mehreren Aufnahmen bestehen – und zu einem Rundgang machen, durch den du gehst, voll für den PC, kleiner für die Frame.
 
+## Neu in 0.7
+
+- ✨ **Flächen glätten** – Spirula schätzt vor dem Training Tiefe und Normalen: Wände und Böden werden eben, kaum noch Flocken schweben im Raum. In sechs Testläufen am selben Raum war das klar die beste Einstellung. Standardmäßig an; dauert etwa 30–60 min länger.
+- 🎨 **Einfache Farben** – ohne Glanz je nach Blickwinkel wird eine Szene für die Frame etwa 20 % kleiner, in denselben Tests ohne sichtbaren Verlust. Ebenfalls standardmäßig an.
+- 🔍 **Spirula für jede Fassung** – auch Fassungen für die Frame öffnen sich in Spirula Studio, so siehst du genau, was auf die Frame geht.
+
 ## Neu in 0.6
 
 - 📥 **Eigene Splats importieren** – eine Splat-Datei aus einem anderen Programm (`.ply`, `.sog`, `.spz`, `.splat`, `.ksplat`) wird zu einer Szene wie die anderen: auf die Frame bringen, Fassungen oder ein Mesh machen. Du wählst das Bild, in dem sie aufrecht steht – das wahrscheinliche ist vorausgewählt – und bei Bedarf die Größe.
