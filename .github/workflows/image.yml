@@ -44,6 +44,7 @@ jobs:
             splat-transform --version
             ffmpeg -version | head -1
             uv --version
+            ldconfig -p | grep -q libEGL.so.1
             touch /data/delete-me
             gio trash /data/delete-me
             test ! -e /data/delete-me'

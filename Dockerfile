@@ -30,11 +30,12 @@ FROM node:22-bookworm-slim AS node
 RUN npm install -g @playcanvas/splat-transform@3.10.3
 
 FROM ubuntu:24.04
-# kisak-mesa: Ubuntu's own Mesa leaves out Dozen, the Vulkan driver for GPUs under WSL
+# kisak-mesa: Ubuntu's own Mesa leaves out Dozen, the Vulkan driver for GPUs under WSL.
+# libegl1: NVIDIA's Vulkan driver cannot start without it, and the NVIDIA runtime does not bring it along.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates gnupg software-properties-common \
  && add-apt-repository -y ppa:kisak/kisak-mesa \
- && apt-get install -y --no-install-recommends curl ffmpeg libglib2.0-bin libgomp1 libvulkan1 \
+ && apt-get install -y --no-install-recommends curl ffmpeg libegl1 libglib2.0-bin libgomp1 libvulkan1 \
         mesa-vulkan-drivers openssh-client python3 util-linux vulkan-tools \
  && apt-get purge -y --auto-remove gnupg software-properties-common \
  && rm -rf /var/lib/apt/lists/*
