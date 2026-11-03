@@ -82,6 +82,19 @@ def test_resume_after_an_interrupted_training():
     assert not (RUNS / "Kitchen" / "spirula" / "training").exists()
 
 
+def test_resume_when_the_training_stopped_before_its_first_checkpoint():
+    rec = recording()
+    (RUNS / "Kitchen" / "dataset").mkdir(parents=True)
+    (RUNS / "Kitchen" / "dataset" / "spirula-dataset.json").write_text('{"status": "complete"}')
+    (RUNS / "Kitchen" / "spirula").mkdir()
+    (RUNS / "Kitchen" / "spirula" / "run.json").write_text('{"status": "running"}')
+    (RUNS / "Kitchen.ui.json").write_text(json.dumps({"name": "Kitchen", "recording": rec.name, "quality": "fast"}))
+    assert server.resume_run("Kitchen", fresh=False) is None
+    js = wait_job()
+    assert js["result"] == "ok", js["tail"]
+    assert "Training was interrupted;" in js["tail"]
+
+
 def test_putting_a_tour_together():
     synth.make_room(RUNS, "Kitchen", "A", name="Kitchen", recording="2026-10-12_16-40-00_stereo.mp4")
     synth.make_room(RUNS, "Hallway", "B", name="Hallway", recording="2026-10-12_16-43-00_stereo.mp4", drift=(0.03, 0, 0))

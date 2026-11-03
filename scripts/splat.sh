@@ -126,7 +126,7 @@ fi
 # Then start the training over; images and camera positions are reused.
 manifest=$out/spirula/run.json
 if [[ " $* " == *" --resume "* ]] && [ -f "$manifest" ] && ! grep -q '"status": *"complete"' "$manifest"; then
-    ckpt=$(ls -d "$out"/spirula/training/step-*.ckpt 2>/dev/null | tail -1)
+    ckpt=$(ls -d "$out"/spirula/training/step-*.ckpt 2>/dev/null | tail -1 || true)   # none yet: no error
     echo "Training was interrupted${ckpt:+ (last checkpoint: ${ckpt##*/step-})}; the pipeline cannot continue it." | tee -a "$log"
     echo "Restarting the training, images and camera positions are reused." | tee -a "$log"
     rm -rf "$out/spirula"

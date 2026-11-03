@@ -25,7 +25,12 @@ if [ "${NORMALS:-0}" = 1 ] && [ -n "$data" ]; then
     images=$( (find "$data/images" -type f 2>/dev/null || true) | wc -l)
     echo "@@ normals $images"
     echo "Estimating surface normals for $images images ..."
-    "$real" geometry "$data"
+    # Spirula can crash on exit with every image written (seen on a GTX 1060, driver 580). Ask again: with
+    # nothing left to do it ends cleanly, and with a real failure it fails again and stops the run here.
+    "$real" geometry "$data" || {
+        echo "Normals: Spirula exited with an error, checking whether all images are done ..."
+        "$real" geometry "$data"
+    }
 fi
 if [ "${SH0:-0}" = 1 ]; then
     extra+=(--sh-degree 0)

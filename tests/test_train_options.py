@@ -60,6 +60,38 @@ def test_the_wrapper_estimates_normals_first(tmp_path):
     assert tools_called()[-1] == ["spirula", "sfm", "auto", "--help"]
 
 
+def crashing_spirula(tmp_path, crashes):
+    """Writes the normals, then fails like a crash on exit: the first `crashes` times."""
+    count = tmp_path / "geometry-runs"
+    fake = tmp_path / "spirula"
+    fake.write_text(f'''#!/bin/bash
+if [ "$1" = geometry ]; then
+    echo run >> {count}
+    [ "$(wc -l < {count})" -gt {crashes} ] || exit 139
+    exit 0
+fi
+echo trained
+''')
+    fake.chmod(0o755)
+    data = tmp_path / "dataset"
+    (data / "images").mkdir(parents=True)
+    env = {**os.environ, "SPIRULA_REAL": str(fake), "NORMALS": "1", "SH0": "1"}
+    return subprocess.run([str(ROOT / "scripts" / "spirula-train.sh"), "train", "--data", str(data)],
+                          env=env, capture_output=True, text=True), count
+
+
+def test_a_crash_after_the_normals_does_not_stop_the_training(tmp_path):
+    r, count = crashing_spirula(tmp_path, crashes=1)
+    assert r.returncode == 0 and "trained" in r.stdout, r.stderr
+    assert len(count.read_text().splitlines()) == 2
+
+
+def test_normals_that_keep_failing_stop_the_run(tmp_path):
+    r, count = crashing_spirula(tmp_path, crashes=5)
+    assert r.returncode == 139 and "trained" not in r.stdout
+    assert len(count.read_text().splitlines()) == 2
+
+
 def test_progress_while_estimating_normals():
     p = server.parse_output("Running native Spirula SfM\n@@ normals 40\nEstimating surface normals for 40 images ...\n")
     assert p["phase"] == 2 and p["info"]["normals"] == {"total": 40}
