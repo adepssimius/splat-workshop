@@ -1,0 +1,18 @@
+# Splat Workshop with an NVIDIA GPU on Linux. See docs/container.md for AMD, Intel and WSL.
+# ./av1-3dgs-pipeline: the Arcturus reconstruction scripts from https://arcturus.vision/apps
+services:
+  splat-workshop:
+    build: ..
+    restart: unless-stopped
+    gpus: all
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: all
+      FRAME_HOST: ""          # steamos@<your Frame's address>
+      # SPLAT_ALLOWED_HOSTS: splat.example.org   # when behind a reverse proxy
+    ports:
+      # There is no login: this is for a network you trust.
+      - "8771:8771"
+    volumes:
+      - ./data:/data
+      - ./av1-3dgs-pipeline:/opt/pipeline:ro
+      # - ~/.ssh/id_ed25519:/run/secrets/frame_key:ro

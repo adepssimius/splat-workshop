@@ -2,6 +2,13 @@
 
 All notable changes to Splat Workshop. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Container image**: a `Dockerfile` with Spirula Studio and all tools, for NVIDIA, AMD and Intel GPUs on Linux and for WSL through Mesa's Dozen. See [docs/container.md](docs/container.md).
+- **`allowed_hosts`** under `[server]` (or `SPLAT_ALLOWED_HOSTS`): host names the page may be reached under in LAN mode, e.g. behind a reverse proxy.
+
 ## [0.7.0] – 2026-10-27
 
 ### Added

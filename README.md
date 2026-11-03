@@ -114,6 +114,8 @@ All changes: [CHANGELOG.md](CHANGELOG.md)
 
 ## Install
 
+Prefer a container, e.g. for a server or a Kubernetes cluster? See [Running Splat Workshop in a container](docs/container.md).
+
 ```bash
 git clone https://github.com/thunderheronight/splat-workshop.git
 cd splat-workshop

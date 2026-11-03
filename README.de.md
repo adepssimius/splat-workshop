@@ -115,6 +115,8 @@ cd splat-workshop
 
 **Läuft unter Linux** (getestet mit Nobara/Fedora und einer RTX 4070 SUPER). macOS ist ungetestet, Windows wird von der Arcturus-Pipeline noch nicht unterstützt.
 
+**Als Container**, z. B. auf einem Server oder in einem Kubernetes-Cluster: siehe [docs/container.md](docs/container.md) (auf Englisch).
+
 **Arcturus-Pipeline und Spirula Studio einrichten:** Schritt für Schritt in [docs/arcturus-setup.de.md](docs/arcturus-setup.de.md) (Pakete, Spirula bauen, bekannte Stolperfallen).
 
 **SSH auf der Frame einrichten** (für Download der Aufnahmen und Kopieren in die Galerie):

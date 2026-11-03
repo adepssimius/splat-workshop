@@ -40,6 +40,9 @@ port = 8771
 # true: other devices in your home network can open the web interface
 # (only private network addresses are accepted). false: only this PC.
 lan = false
+# LAN mode only: host names the page is reached under besides this PC's own, e.g. behind a
+# reverse proxy. There is no login: put one in front of the proxy if others can reach it.
+allowed_hosts = []
 # Without a tray icon the server stops itself after this many idle minutes
 # (nothing running, no page open). With the tray icon it runs until you quit it.
 idle_minutes = 20

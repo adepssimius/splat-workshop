@@ -91,7 +91,7 @@ def host_allowed(host: str) -> bool:
         ip = ipaddress.ip_address(host)
         return ip.is_loopback or (CFG.lan and ip.is_private)
     except ValueError:
-        return host == "localhost" or (CFG.lan and host in HOST_NAMES)
+        return host == "localhost" or (CFG.lan and (host in HOST_NAMES or host in CFG.allowed_hosts))
 
 
 def pretty_date(stem: str) -> str:

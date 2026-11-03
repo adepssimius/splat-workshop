@@ -1,0 +1,17 @@
+# Splat Workshop in a container; written to /data/config.toml on the first start.
+# All settings with explanations: config.example.toml in the repository.
+
+[paths]
+pipeline = "/opt/pipeline"
+spirula = "/opt/spirula/spirula"
+recordings = "/data/recordings"
+runs = "/data/runs"
+extra_recording_dirs = []
+
+[frame]
+# Or set FRAME_HOST in the container's environment.
+host = ""
+
+[server]
+# An update means a new image here, so the note about new releases is off.
+check_updates = false

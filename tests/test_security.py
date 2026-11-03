@@ -2,6 +2,7 @@
 import pytest
 
 from conftest import RUNS, SHUTDOWNS, server
+from splat_workshop import config
 import synth
 
 
@@ -53,6 +54,30 @@ def test_lan_mode_checks_the_real_client_address(monkeypatch, lan, client, ok):
             self.headers = {"Host": "192.168.1.5:8771" if lan else "127.0.0.1:8771"}
             self.command, self.path = "GET", "/api/scenes"
     assert H()._host_ok() is ok
+
+
+@pytest.mark.parametrize("lan,host,ok", [
+    (True, "splat.example.org", True), (True, "SPLAT.example.org", True),
+    (True, "other.example.org", False),
+    (False, "splat.example.org", False),   # the list only opens up LAN mode, never the local-only default
+])
+def test_allowed_hosts_are_accepted_only_in_lan_mode(monkeypatch, lan, host, ok):
+    monkeypatch.setattr(server.CFG, "lan", lan)
+    monkeypatch.setattr(server.CFG, "allowed_hosts", {"splat.example.org"})
+    assert server.host_allowed(host) is ok
+
+
+def test_allowed_hosts_come_from_the_config_file_or_the_environment(monkeypatch):
+    def load(env, hosts):
+        if env is None:
+            monkeypatch.delenv("SPLAT_ALLOWED_HOSTS", raising=False)
+        else:
+            monkeypatch.setenv("SPLAT_ALLOWED_HOSTS", env)
+        data = config._merge(config.DEFAULTS, {"server": {"allowed_hosts": hosts}})
+        return config.Config(data, None).allowed_hosts
+    assert load(None, ["Splat.Example.org"]) == {"splat.example.org"}
+    assert load("a.example, B.example,", ["c.example"]) == {"a.example", "b.example"}
+    assert load("", ["c.example"]) == set()
 
 
 @pytest.mark.parametrize("body,headers", [

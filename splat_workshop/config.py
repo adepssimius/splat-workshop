@@ -30,7 +30,8 @@ DEFAULTS = {
         "video_player": "",
     },
     "frame": {"host": ""},
-    "server": {"port": 8771, "lan": False, "idle_minutes": 20, "language": "auto", "check_updates": True},
+    "server": {"port": 8771, "lan": False, "allowed_hosts": [], "idle_minutes": 20, "language": "auto",
+               "check_updates": True},
 }
 
 
@@ -95,6 +96,10 @@ class Config:
         self.port = int(os.environ.get("SPLAT_PORT", s["port"]))
         lan = os.environ.get("SPLAT_LAN")
         self.lan = (lan != "0") if lan is not None else bool(s["lan"])
+        # Host names the page is reached under besides this PC's own, e.g. behind a reverse proxy (LAN mode only)
+        hosts = os.environ.get("SPLAT_ALLOWED_HOSTS")
+        hosts = hosts.split(",") if hosts is not None else s.get("allowed_hosts", [])
+        self.allowed_hosts = {h.strip().lower() for h in hosts if h.strip()}
         self.idle_minutes = int(s["idle_minutes"])
         self.language = s.get("language", "auto")
         self.check_updates = bool(s.get("check_updates", True))
