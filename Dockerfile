@@ -7,7 +7,7 @@
 # Each shader compiler takes 3-4 GB of memory, so choose BUILD_JOBS by memory rather than by CPU cores.
 
 FROM ubuntu:24.04 AS spirula
-ARG SPIRULA_REV=069fb5e489fb81c4c8d04b515330851ab88c7965
+ARG SPIRULA_REV=09383f75029fd9e0f34847e50d8514c3932db984
 ARG BUILD_JOBS=3
 RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential ca-certificates cmake curl git \
@@ -17,9 +17,10 @@ RUN git init -q . \
  && git remote add origin https://github.com/arcturus-vision/spirula-studio.git \
  && git fetch -q --depth 1 origin "$SPIRULA_REV" \
  && git checkout -q FETCH_HEAD
-# Not build_develop.bash: it takes its job count from the host's memory and ignores the container's limit
+# Not build_develop.bash: it takes its job count from the host's memory and ignores the container's limit.
+# SS_BUILD_SAM: `spirula geometry`, which "Smooth surfaces" runs, is only built with it.
 RUN cmake -B build_vulkan -G Ninja -DCMAKE_BUILD_TYPE=Release -DSS_BACKEND=vulkan \
-        -DSS_BUILD_GUI=OFF -DSS_BUILD_SFM=ON -DSS_BUILD_SAM=OFF \
+        -DSS_BUILD_GUI=OFF -DSS_BUILD_SFM=ON -DSS_BUILD_SAM=ON \
  && ninja -C build_vulkan -j"$BUILD_JOBS" spirula \
  && strip build_vulkan/spirula \
  && mkdir -p /out \

@@ -62,6 +62,7 @@ set_driver() {
     local files=""
     case $1 in
         wsl)
+            say "WARNING: under WSL, Spirula's training crashes in Mesa's Dozen driver. Conversions stop there. See docs/container.md."
             link_wsl_libraries
             export LD_LIBRARY_PATH=$ROOT/usr/lib/wsl/lib
             files=$ICD_DIR/dzn_icd.json ;;

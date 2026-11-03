@@ -72,6 +72,7 @@ def test_wsl_uses_dozen_and_links_every_gpus_driver(box):
     r = box.run()
     assert r.returncode == 0, r.stderr
     assert "Vulkan driver: wsl" in r.stdout
+    assert "training crashes" in r.stdout                       # a warning now, not an hour into a conversion
     assert f"DRIVER_FILES={box.root}/usr/share/vulkan/icd.d/dzn_icd.json" in r.stdout
     assert f"LIBS={box.root}/usr/lib/wsl/lib" in r.stdout
     lib, drivers = box.root / "usr/lib/wsl/lib", box.root / "usr/lib/wsl/drivers"

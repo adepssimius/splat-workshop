@@ -13,7 +13,7 @@ Everything that should stay goes to `/data`: config, recordings, scenes and the 
 docker build --build-arg SPIRULA_REV=<commit> -t splat-workshop .
 ```
 
-Use the Spirula revision the pipeline's README names (`git -C spirula-studio checkout <commit>`). On start, the container warns if the two differ.
+The default is the Spirula revision of the pipeline from October 2026. For another pipeline, use the revision its README names (`git -C spirula-studio checkout <commit>`). On start, the container warns if the two differ.
 
 Building takes about 20 minutes and a lot of memory: each shader compiler takes 3–4 GB, and `BUILD_JOBS` sets how many run at once (default 3). With 8 GB or less, use `--build-arg BUILD_JOBS=1`.
 
@@ -35,14 +35,17 @@ docker run --device /dev/dri -p 8771:8771 \
     -v ./data:/data -v ./av1-3dgs-pipeline:/opt/pipeline:ro splat-workshop
 ```
 
-**WSL** has no Linux Vulkan driver for the GPU. The image goes through Mesa's Dozen, which runs Vulkan on Direct3D 12, and needs the host's libraries:
+**WSL cannot run a full conversion.** WSL has no Linux Vulkan driver for the GPU, so the image goes through Mesa's Dozen, which runs Vulkan on Direct3D 12. Spirula's training crashes there. To use the rest, such as structure-from-motion, the image needs the host's libraries:
 
 ```bash
 docker run --device /dev/dxg -v /usr/lib/wsl:/wsl:ro -p 8771:8771 \
     -v ./data:/data -v ./av1-3dgs-pipeline:/opt/pipeline:ro splat-workshop
 ```
 
-Dozen is not a conformant Vulkan driver, and bundle adjustment runs on the CPU with it. Tested so far on an RTX 5070 Ti with Spirula's structure-from-motion; training through Dozen has not been tested yet.
+Tested on an RTX 5070 Ti with Mesa 26.2.6. Dozen is not a conformant Vulkan driver:
+
+- **Training** crashes in Dozen's shader compiler (`Unimplemented ALU instruction: unpack_64_2x32_split_y`), also with `SS_VK_NATIVE_INT64=0`.
+- **Structure-from-motion** works, but its bundle adjustment runs on the CPU. On one set of 100 photos, cameras differed from a COLMAP reference by about 2.2° on average, against 0.12° with the GPU solver on an NVIDIA driver. On one real recording, 48% of the images registered, against 60% with the GPU solver, and the pipeline stopped there.
 
 **No GPU:** `-e ALLOW_CPU=1` runs on the CPU (lavapipe). This is for trying things out: matching took about 28 times as long as on a GPU in one test.
 
