@@ -1,0 +1,77 @@
+name: Container image
+
+on:
+  push:
+    branches: [main, feature/container-image]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - docker/**
+      - splat_workshop/**
+      - scripts/**
+      - web/**
+      - .github/workflows/image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/splat-workshop" >> "$GITHUB_ENV"
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: splat-workshop:test
+          # Each shader compiler takes 3-4 GB, and the runner has about 16 GB
+          build-args: BUILD_JOBS=2
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The tools run, as the normal user and on the CPU
+        run: |
+          docker run --rm -e ALLOW_CPU=1 splat-workshop:test sh -ec '
+            test "$(id -u)" = 1000
+            /opt/spirula/spirula sfm --version
+            splat-transform --version
+            ffmpeg -version | head -1
+            uv --version
+            touch /data/delete-me
+            gio trash /data/delete-me
+            test ! -e /data/delete-me'
+      - name: The server answers and only misses the Arcturus scripts
+        run: |
+          docker run -d --name splat -e ALLOW_CPU=1 -p 8771:8771 splat-workshop:test
+          for _ in $(seq 30); do curl -fsS http://127.0.0.1:8771/api/ping -o ping.json && break; sleep 1; done
+          docker logs splat
+          python3 - <<'PY'
+          import json
+          problems = json.load(open("ping.json"))["problems"]
+          assert len(problems) == 1 and "/opt/pipeline" in str(problems[0]), problems
+          PY
+      - name: Log in
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:dev,${{ env.IMAGE }}:sha-${{ github.sha }}
+          build-args: BUILD_JOBS=2
+          cache-from: type=gha
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=GPL-3.0-only
